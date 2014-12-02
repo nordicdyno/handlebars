@@ -5,8 +5,10 @@
 ### handlebars
 handlebars template engine by golang
 
-### dependences
-* [mustache](https://github.com/hoisie/mustache)
+### TODO
+* `Local`
+* `RenderInLayout`
+* `RegisterPartials`
 
 ### License
 MIT

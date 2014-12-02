@@ -5,5 +5,4 @@ script:
   - go test
 install:
   - go get github.com/smartystreets/goconvey
-  - go get github.com/hoisie/mustache
   - go get github.com/tj/go-debug

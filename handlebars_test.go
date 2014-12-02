@@ -7,60 +7,63 @@ import "path"
 
 func TestHandlebars(t *testing.T) {
 	Convey("handlebars", t, func() {
-		render := Create(map[string]interface{}{
+		render := New(map[string]interface{}{
 			"dir": "./template",
 		})
 
 		Convey("parse", func() {
-			t.Logf("dir: %s, ext: %s, cacheLimit: %d", render.Dir, render.Ext, render.CacheLimit)
+			debug("dir: %s, ext: %s, cacheLimit: %d", render.dir, render.ext, render.cacheLimit)
 
-			c := map[string]string{
+			ctx := map[string]string{
 				"name": "haoxin",
 			}
 
-			t.Logf("context: %v", c)
-
-			s := render.Parse("name:{{name}}", c)
-			// So(s, ShouldEqual, "name:haoxin")
+			output := render.Parse("name: {{name}}", ctx)
+			So(output, ShouldEqual, "name: haoxin")
 			// todo: check this is from cache
-			s = render.Parse("name:{{name}}", c)
-			// So(s, ShouldEqual, "name:haoxin")
-			t.Log(s)
+			output = render.Parse("name:{{name}}", ctx)
+			So(output, ShouldEqual, "name:haoxin")
 		})
-
-		Convey("parse in layout", func() {})
 
 		Convey("render", func() {
-			s := render.Render("index", map[string]interface{}{
+			expected := readTestFile("index")
+
+			output := render.Render("index", map[string]interface{}{
 				"title": "test",
-				"body":  "<pre>hello</pre>",
-			})
-
-			t.Log(s)
-
-			// So()
-
-			s = render.Render("index", map[string]interface{}{
-				"title": "test",
-				"body":  "<pre>hello</pre>",
-			})
+				"body":  "<pre>hello world</pre>",
+				"users": []User{{
+					Name: "haoxin",
+					Age:  2,
+				}, {
+					Name: "xin",
+					Age:  1,
+				}}})
+			So(output, ShouldEqual, expected)
 			// todo: check this is from cache
+			output = render.Render("index", map[string]interface{}{
+				"title": "test",
+				"body":  "<pre>hello world</pre>",
+				"users": []User{{
+					Name: "haoxin",
+					Age:  2,
+				}, {
+					Name: "xin",
+					Age:  1,
+				}}})
+			So(output, ShouldEqual, expected)
 		})
 
-		Convey("render in layout", func() {})
-
 		Convey("read file", func() {
-			So(readFile("test"), ShouldEqual, "<h1>test</h1>\n")
+			So(readTestFile("test"), ShouldEqual, "<h1>test</h1>\n")
 		})
 	})
 }
 
-// only for test
-func readFile(filename string) string {
+func readTestFile(filename string) string {
 	var abs string
 
 	if len(path.Ext(filename)) == 0 {
-		abs = resolve("template/result", filename) + ".html"
+		abs = resolve("template/result", filename) + ".txt"
 	} else {
 		abs = resolve("template/result", filename)
 	}

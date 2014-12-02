@@ -1,6 +1,5 @@
 package handlebars
 
-import "github.com/hoisie/mustache"
 import . "github.com/tj/go-debug"
 import "path/filepath"
 import "strings"
@@ -10,22 +9,25 @@ import "os"
 var debug = Debug("handlebars")
 
 type Render struct {
-	Dir        string
-	Ext        string
-	Local      interface{}
-	Cache      map[string]*mustache.Template
-	CacheLimit int
+	dir        string
+	ext        string
+	cache      map[string]*Template
+	cacheLimit int
+	helpers    map[string]interface{}
+	partials   map[string]*Template
 }
 
-func Create(config map[string]interface{}) *Render {
+func New(config map[string]interface{}) *Render {
 	r := new(Render)
-	r.Cache = map[string]*mustache.Template{}
+	r.cache = map[string]*Template{}
+	// r.helpers = map[string]interface{}
+	// r.partials = map[string]*Template{}
 
 	if v, ok := config["dir"]; true {
 		if ok {
-			r.Dir = parseConfigDir(v.(string))
+			r.dir = parseConfigDir(v.(string))
 		} else {
-			r.Dir, _ = os.Getwd()
+			r.dir, _ = os.Getwd()
 		}
 	}
 
@@ -33,125 +35,100 @@ func Create(config map[string]interface{}) *Render {
 		if ok {
 			s := v.(string)
 			if strings.HasPrefix(s, ".") {
-				r.Ext = s
+				r.ext = s
 			} else {
-				r.Ext = "." + s
+				r.ext = "." + s
 			}
 		} else {
-			r.Ext = ".hbs"
+			r.ext = ".hbs"
 		}
 	}
-
-	// if v, ok := config["local"]; ok {
-	// 	// todo: local
-	// }
 
 	if v, ok := config["cacheLimit"]; true {
 		if ok {
 			i := v.(int)
 
 			if i < 0 {
-				r.CacheLimit = 0
+				r.cacheLimit = 0
 			} else {
-				r.CacheLimit = i
+				r.cacheLimit = i
 			}
 		} else {
-			r.CacheLimit = 50
+			r.cacheLimit = 50
 		}
 	}
 
 	return r
 }
 
-// parse string
+// public
 func (r *Render) Parse(data string, context ...interface{}) string {
-	debug("data: %s, context: %v", data, context)
-	return r.GetTemplate(data, false).Render(context)
+	return r.getTemplate(data, false).Render(context...)
 }
 
-// parse string in layout
-func (r *Render) ParseInLayout(data string, layoutData string, context ...interface{}) string {
-	t := r.GetTemplate(data, false)
-	return t.RenderInLayout(r.GetTemplate(layoutData, false), context)
-}
-
-// render file
 func (r *Render) Render(filename string, context ...interface{}) string {
-	debug("filename: %s, context: %v", filename, context)
-	return r.GetTemplate(filename, true).Render(context)
+	return r.getTemplate(filename, true).Render(context...)
 }
 
-// render file in layout
-func (r *Render) RenderInLayout(filename string, layoutFile string, context ...interface{}) string {
-	t := r.GetTemplate(filename, true)
-	return t.RenderInLayout(r.GetTemplate(layoutFile, true), context)
-}
+// func (r *Render) RegisterHelper(name string, helper interface{}) {}
+
+// func (r *Render) RegisterPartial(name string, filename string) {}
 
 // private
-func (r *Render) GetAbsPath(filename string) string {
-	abs := resolve(r.Dir, filename)
+func (r *Render) getAbsPath(filename string) string {
+	abs := resolve(r.dir, filename)
 
 	if len(path.Ext(abs)) == 0 {
-		return abs + r.Ext
+		return abs + r.ext
 	}
 
 	return abs
 }
 
-// private
-func (r *Render) GetTemplate(s string, isPath bool) *mustache.Template {
+func (r *Render) getTemplate(s string, isPath bool) *Template {
 	if isPath {
-		abs := r.GetAbsPath(s)
-		t, ok := r.Cache[abs]
+		abs := r.getAbsPath(s)
+		t, ok := r.cache[abs]
 
 		if ok {
 			debug("from cache")
 			return t
 		}
 
-		t, err := mustache.ParseFile(abs)
+		t, err := parseFile(abs)
 		debug("parse file: %s", abs)
 		panicError(err)
 
-		r.AddToCache(abs, t)
+		r.addToCache(abs, t)
 
 		return t
 	}
 
 	key := hash(s)
-	t, ok := r.Cache[key]
+	t, ok := r.cache[key]
 
 	if ok {
 		debug("from cache")
 		return t
 	}
 
-	t, err := mustache.ParseString(s)
+	t, err := parseString(s)
 	debug("parse string: %v", s)
 	panicError(err)
 
-	r.AddToCache(key, t)
+	r.addToCache(key, t)
 
 	return t
 }
 
-// private
-func (r *Render) AddToCache(key string, t *mustache.Template) {
-	if len(r.Cache) > r.CacheLimit {
+func (r *Render) addToCache(key string, t *Template) {
+	if len(r.cache) > r.cacheLimit {
 		return
 	}
 
 	debug("add to cache")
-	r.Cache[key] = t
+	r.cache[key] = t
 }
-
-func AddLocal(data interface{}) {}
-
-func RegisterHelper() {}
-
-func RegisterPartial() {}
-
-func RegisterPartials(dir string) {}
 
 func parseConfigDir(s string) string {
 	if filepath.IsAbs(s) {
