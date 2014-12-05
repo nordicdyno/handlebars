@@ -27,14 +27,19 @@ type sectionElement struct {
 }
 
 type Template struct {
-	data    string
-	otag    string // open tag
-	ctag    string // close tag
-	p       int
-	curline int
-	ext     string
-	dir     string
-	elems   []interface{}
+	data     string
+	otag     string // open tag
+	ctag     string // close tag
+	p        int
+	curline  int
+	ext      string
+	dir      string
+	partials map[string]string // [name]path
+	elems    []interface{}
+}
+
+type config struct {
+	partials map[string]string
 }
 
 type parseError struct {
@@ -89,9 +94,25 @@ func (tmpl *Template) readString(s string) (string, error) {
 }
 
 func (tmpl *Template) parsePartial(name string) (*Template, error) {
-	// todo: register partial
-	filename := path.Join(tmpl.dir, name+tmpl.ext)
-	partial, err := parseFile(filename)
+	notInPartials := false
+	var filename string
+
+	if tmpl.partials == nil {
+		notInPartials = true
+	} else {
+		var ok bool
+		filename, ok = tmpl.partials[name]
+
+		if !ok {
+			notInPartials = true
+		}
+	}
+
+	if notInPartials {
+		filename = path.Join(tmpl.dir, name+tmpl.ext)
+	}
+
+	partial, err := parseFile(filename, config{})
 
 	if err != nil {
 		return nil, err
@@ -492,17 +513,18 @@ func (tmpl *Template) Render(context ...interface{}) string {
 	return buf.String()
 }
 
-func parseString(data string) (*Template, error) {
+func parseString(data string, conf config) (*Template, error) {
 	cwd := os.Getenv("CWD")
 	tmpl := Template{
-		data:    string(data),
-		otag:    "{{",
-		ctag:    "}}",
-		p:       0,
-		curline: 1,
-		ext:     ".hbs",
-		dir:     cwd,
-		elems:   []interface{}{},
+		data:     string(data),
+		otag:     "{{",
+		ctag:     "}}",
+		p:        0,
+		curline:  1,
+		ext:      ".hbs",
+		dir:      cwd,
+		partials: conf.partials,
+		elems:    []interface{}{},
 	}
 	err := tmpl.parse()
 
@@ -513,7 +535,7 @@ func parseString(data string) (*Template, error) {
 	return &tmpl, err
 }
 
-func parseFile(filename string) (*Template, error) {
+func parseFile(filename string, conf config) (*Template, error) {
 	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -522,14 +544,15 @@ func parseFile(filename string) (*Template, error) {
 	dirname, _ := path.Split(filename)
 
 	tmpl := Template{
-		data:    string(data),
-		otag:    "{{",
-		ctag:    "}}",
-		p:       0,
-		curline: 1,
-		ext:     ".hbs",
-		dir:     dirname,
-		elems:   []interface{}{},
+		data:     string(data),
+		otag:     "{{",
+		ctag:     "}}",
+		p:        0,
+		curline:  1,
+		ext:      ".hbs",
+		dir:      dirname,
+		partials: conf.partials,
+		elems:    []interface{}{},
 	}
 	err = tmpl.parse()
 
@@ -541,7 +564,7 @@ func parseFile(filename string) (*Template, error) {
 }
 
 func RenderString(data string, context ...interface{}) string {
-	tmpl, err := parseString(data)
+	tmpl, err := parseString(data, config{})
 	if err != nil {
 		return err.Error()
 	}
@@ -549,7 +572,7 @@ func RenderString(data string, context ...interface{}) string {
 }
 
 func RenderFile(filename string, context ...interface{}) string {
-	tmpl, err := parseFile(filename)
+	tmpl, err := parseFile(filename, config{})
 	if err != nil {
 		return err.Error()
 	}
