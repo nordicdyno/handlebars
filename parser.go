@@ -1,3 +1,3 @@
 package handlebars
 
-// todo: split template to parser, render
+// TODO: split template to parser, render

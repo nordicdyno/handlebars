@@ -7,6 +7,7 @@ handlebars template engine by golang
 
 ### TODO
 * `Local`
+* `Helper`
 * `RenderInLayout`
 * `RegisterPartials`
 

@@ -1,23 +1,23 @@
 package handlebars
 
-// some build in helpers
+// TODO: some build in helpers
 
-func If() {
-
-}
-
-func Each() {
+func If(ctx interface{}, args ...interface{}) {
 
 }
 
-func With() {
+func Each(ctx interface{}, args ...interface{}) {
 
 }
 
-func Above() {
+func With(ctx interface{}, args ...interface{}) {
 
 }
 
-func Below() {
+func Above(ctx interface{}, args ...interface{}) {
+
+}
+
+func Below(ctx interface{}, args ...interface{}) {
 
 }

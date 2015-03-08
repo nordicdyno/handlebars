@@ -3,7 +3,7 @@ package handlebars
 import . "github.com/smartystreets/goconvey/convey"
 import "testing"
 
-func TestSnap(t *testing.T) {
+func TestUtil(t *testing.T) {
 	Convey("util", t, func() {
 		Convey("resolve", func() {
 			So(resolve("", "c"), ShouldEndWith, "handlebars/c")
